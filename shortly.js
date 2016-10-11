@@ -13,49 +13,41 @@ var Click = require('./app/models/click');
 
 var app = express();
 
-var checked = false;
-var user;
-
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
+
 app.use(partials());
-// Parse JSON (uniform resource locators)
 app.use(bodyParser.json());
-// Parse forms (signup/login)
-// var checkUser;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
+var checked = false;
+
 var checkUser = function(req, res, next) {
   if (!checked && (req.url === '/' || req.url === '/create' || req.url === '/links')) {
-    req.url = '/login';
-    // res.req.path = '/login';
+    res.redirect('/login');
+  } else {
+    next();
   }
-  next();
 };
 app.use(checkUser);
 
-app.get('/', 
-function(req, res) {
+app.get('/', function(req, res) {
   res.render('index');
 });
 
-app.get('/create', 
-function(req, res) {
+app.get('/create', function(req, res) {
   res.render('index');
-
 });
 
-app.get('/links', 
-function(req, res) {
+app.get('/links', function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.status(200).send(links.models);
   });
 });
 
-app.post('/links', 
-function(req, res) {
+app.post('/links', function(req, res) {
   var uri = req.body.url;
 
   if (!util.isValidUrl(uri)) {
@@ -90,13 +82,11 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
-app.get('/signup',
-function(req, res) {
+app.get('/signup',function(req, res) {
   res.render('signup');
 });
 
-app.post('/signup',
-function(req, res) {
+app.post('/signup',function(req, res) {
   new User({ username: req.body.username}).fetch().then(function(found) {
     if (found) {
       res.status(200).send('username taken');
@@ -114,41 +104,34 @@ function(req, res) {
   });
 });
 
-app.get('/logout',
-function(req, res) {
-  console.log('logging out');
-  checked = false;
+// ================ LOG OUT=================
+
+app.get('/logout', function(req, res) {
   res.redirect('/login');
 });
 
 // ================ LOGIN =================
-app.get('/login', 
-function(req, res) {
+
+app.get('/login', function(req, res) {
   res.render('login');
 });
 
-app.post('/login', 
-function(req, res) {
+app.post('/login', function(req, res) {
   new User({username: req.body.username}).fetch().then(function(found) {
     // USERNAME FOUND
     if (found) {
-      console.log('bro I got you');
       // CHECK PW
       if (found.attributes.password !== req.body.password) {
-        res.status(404).send('do you even lift bruh?');
+        res.redirect('/login')
       } else {
         checked = true;
         res.redirect('/');
       }
     } else {
-      res.status(404).send('do you even lift bruh?');
+      res.redirect('/login')
     }
   });
 });
-
-
-// =================== CHECK USER ====================
-
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
