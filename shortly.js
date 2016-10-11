@@ -13,15 +13,28 @@ var Click = require('./app/models/click');
 
 var app = express();
 
+var checked = false;
+var user;
+
 app.set('views', __dirname + '/views');
 app.set('view engine', 'ejs');
 app.use(partials());
 // Parse JSON (uniform resource locators)
 app.use(bodyParser.json());
 // Parse forms (signup/login)
+// var checkUser;
+
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
+var checkUser = function(req, res, next) {
+  if (!checked && (req.url === '/' || req.url === '/create' || req.url === '/links')) {
+    req.url = '/login';
+    // res.req.path = '/login';
+  }
+  next();
+};
+app.use(checkUser);
 
 app.get('/', 
 function(req, res) {
@@ -31,6 +44,7 @@ function(req, res) {
 app.get('/create', 
 function(req, res) {
   res.render('index');
+
 });
 
 app.get('/links', 
@@ -76,6 +90,64 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
+app.get('/signup',
+function(req, res) {
+  res.render('signup');
+});
+
+app.post('/signup',
+function(req, res) {
+  new User({ username: req.body.username}).fetch().then(function(found) {
+    if (found) {
+      res.status(200).send('username taken');
+    } else {
+      Users.create({
+        username: req.body.username,
+        password: req.body.password
+      })
+      .then(function(newLink) {
+        //redirect to index.html
+        checked = true;
+        res.status(200).redirect('/');
+      });
+    }
+  });
+});
+
+app.get('/logout',
+function(req, res) {
+  console.log('logging out');
+  checked = false;
+  res.redirect('/login');
+});
+
+// ================ LOGIN =================
+app.get('/login', 
+function(req, res) {
+  res.render('login');
+});
+
+app.post('/login', 
+function(req, res) {
+  new User({username: req.body.username}).fetch().then(function(found) {
+    // USERNAME FOUND
+    if (found) {
+      console.log('bro I got you');
+      // CHECK PW
+      if (found.attributes.password !== req.body.password) {
+        res.status(404).send('do you even lift bruh?');
+      } else {
+        checked = true;
+        res.redirect('/');
+      }
+    } else {
+      res.status(404).send('do you even lift bruh?');
+    }
+  });
+});
+
+
+// =================== CHECK USER ====================
 
 
 /************************************************************/
